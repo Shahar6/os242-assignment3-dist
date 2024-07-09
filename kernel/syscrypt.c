@@ -111,3 +111,8 @@ crypto_srv_init(void)
   p->state = RUNNABLE;
   release(&p->lock);
 }
+
+uint64 map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src_va, uint64 size)
+{
+
+}
