@@ -705,12 +705,11 @@ struct proc* find_proc(int src_pid) {
     return src_proc;
 }
 
-
 uint64 map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src_va, uint64 size) {
-    // Calculate the page-aligned start and end addresses 
-    uint64 src_start = PGROUNDDOWN(src_va);
-    uint64 src_end = PGROUNDUP(src_va + size);
-    uint64 num_pages = (src_end - src_start) / PGSIZE;
+    // Calculate the start and end addresses 
+    uint64 start = PGROUNDDOWN(src_va);
+    uint64 end = PGROUNDUP(src_va + size);
+    uint64 num_pages = (end - start) / PGSIZE;
 
     // Allocate new virtual address space in the destination process
     uint64 dst_va = dst_proc->sz;
@@ -718,32 +717,28 @@ uint64 map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src
 
     // Map each page from the source to the destination
     for (uint64 i = 0; i < num_pages; i++) {
-        uint64 cur_src_va = src_start + i * PGSIZE;
+        uint64 cur_src_va = start + i * PGSIZE;
 
-        // Get the physical address for the current page in the source process
         pte_t *pte = walk(src_proc->pagetable, cur_src_va, 0);
         if (pte == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_U) == 0) {
-            // Invalid or non-user-accessible page
-            return 0;  // Return null or error code as needed
+            return -1;  
         }
         uint64 pa = PTE2PA(*pte);
         uint64 flags = PTE_FLAGS(*pte);
 
         // Map the physical page into the destination process with shared flag
         if (mappages(dst_proc->pagetable, dst_va + i * PGSIZE, PGSIZE, pa, flags | PTE_S) != 0) {
-            // Handle mapping failure
-            return 0;  // Return null or error code as needed
+            return -1;  
         }
     }
 
-    // Calculate the offset for the returned virtual address
-    uint64 offset = src_va - src_start;
+    uint64 offset = src_va - start;
     return dst_va + offset;
 }
 
 uint64 
 unmap_shared_pages(struct proc* p, uint64 addr, uint64 size) {
-    // Calculate the page-aligned start and end addresses
+    // Calculate the start and end addresses
     uint64 start = PGROUNDDOWN(addr);
     uint64 end = PGROUNDUP(addr + size);
     uint64 num_pages = (end - start) / PGSIZE;
@@ -753,8 +748,7 @@ unmap_shared_pages(struct proc* p, uint64 addr, uint64 size) {
         uint64 cur_va = start + i * PGSIZE;
         pte_t *pte = walk(p->pagetable, cur_va, 0);
         if (pte == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_U) == 0 || (*pte & PTE_S) == 0) {
-            // Invalid or non-user-accessible or non-shared page
-            return -1;  // Return failure
+            return -1;
         }
     }
 
@@ -764,5 +758,5 @@ unmap_shared_pages(struct proc* p, uint64 addr, uint64 size) {
     // Update the process size
     p->sz -= num_pages * PGSIZE;
 
-    return 0;  // Return success
+    return 0;
 }
