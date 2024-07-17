@@ -694,8 +694,20 @@ procdump(void)
 
 
 //TASK1
+struct proc* find_proc(int src_pid) {
+    struct proc *src_proc;
+    src_proc = proc;
+    for (; src_proc < &proc[NPROC]; src_proc++) {
+        if (src_proc->pid == src_pid) {
+            return src_proc;
+        }
+    }
+    return src_proc;
+}
+
+
 uint64 map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src_va, uint64 size) {
-    // Calculate the page-aligned start and end addresses
+    // Calculate the page-aligned start and end addresses 
     uint64 src_start = PGROUNDDOWN(src_va);
     uint64 src_end = PGROUNDUP(src_va + size);
     uint64 num_pages = (src_end - src_start) / PGSIZE;
