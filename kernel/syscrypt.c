@@ -36,7 +36,7 @@ uint64 sys_crypto_op(void) {
 
     argaddr(0, &crypto_op);
     argaddr(1, &size);
-
+  
     const struct proc *p = myproc();
 
     // Record crypto operation request in the shmem queue
@@ -110,9 +110,4 @@ crypto_srv_init(void)
 
   p->state = RUNNABLE;
   release(&p->lock);
-}
-
-uint64 map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src_va, uint64 size)
-{
-
 }

@@ -27,6 +27,10 @@ int crypto_op(struct crypto_op*, int);
 int take_shared_memory_request(void**, uint64*);
 int remove_shared_memory_request(void*, uint64);
 
+//TASK1
+int map_shared_pages(); //TODO: add args
+int unmap_shared_pages();
+
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);
