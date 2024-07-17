@@ -688,3 +688,28 @@ procdump(void)
     printf("\n");
   }
 }
+
+uint64 
+map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src_va, uint64 size)
+{
+  pte_t *pte;
+  uint64 pa;
+
+  pte = walk(src_proc->pagetable, src_va, 0);
+  if(pte == 0)
+    return 0;
+  if((*pte & PTE_V) == 0)
+    return 0;
+  if((*pte & PTE_U) == 0)
+    return 0;
+  pa = PTE2PA(*pte);
+
+  uint64 va = dst_proc->sz;
+  int res = mappages(dst_proc->pagetable, va, size, pa, PTE_R | PTE_W | PTE_S);
+  // using sz here is ok?
+  if (res == -1)
+    return 0;
+  dst_proc->sz = dst_proc->sz + size; // need to be more accurate here with actual value aligned to pages copied
+  
+  // return va + offset;
+} // missing - return address, maintain size correctly, recall, use
