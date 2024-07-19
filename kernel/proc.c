@@ -7,6 +7,9 @@
 #include "proc.h"
 #include "defs.h"
 
+
+
+
 struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
@@ -687,4 +690,73 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+
+//TASK1
+struct proc* find_proc(int src_pid) {
+    struct proc *src_proc;
+    src_proc = proc;
+    for (; src_proc < &proc[NPROC]; src_proc++) {
+        if (src_proc->pid == src_pid) {
+            return src_proc;
+        }
+    }
+    return src_proc;
+}
+
+uint64 map_shared_pages(struct proc* src_proc, struct proc* dst_proc, uint64 src_va, uint64 size) {
+    // Calculate the start and end addresses 
+    uint64 start = PGROUNDDOWN(src_va);
+    uint64 end = PGROUNDUP(src_va + size);
+    uint64 num_pages = (end - start) / PGSIZE;
+
+    // Allocate new virtual address space in the destination process
+    uint64 dst_va = dst_proc->sz;
+    dst_proc->sz += num_pages * PGSIZE;
+
+    // Map each page from the source to the destination
+    for (uint64 i = 0; i < num_pages; i++) {
+        uint64 cur_src_va = start + i * PGSIZE;
+
+        pte_t *pte = walk(src_proc->pagetable, cur_src_va, 0);
+        if (pte == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_U) == 0) {
+            return -1;  
+        }
+        uint64 pa = PTE2PA(*pte);
+        uint64 flags = PTE_FLAGS(*pte);
+
+        // Map the physical page into the destination process with shared flag
+        if (mappages(dst_proc->pagetable, dst_va + i * PGSIZE, PGSIZE, pa, flags | PTE_S) != 0) {
+            return -1;  
+        }
+    }
+
+    uint64 offset = src_va - start;
+    return dst_va + offset;
+}
+
+uint64 
+unmap_shared_pages(struct proc* p, uint64 addr, uint64 size) {
+    // Calculate the start and end addresses
+    uint64 start = PGROUNDDOWN(addr);
+    uint64 end = PGROUNDUP(addr + size);
+    uint64 num_pages = (end - start) / PGSIZE;
+
+    // Verify that the requested mapping exists and is a shared mapping
+    for (uint64 i = 0; i < num_pages; i++) {
+        uint64 cur_va = start + i * PGSIZE;
+        pte_t *pte = walk(p->pagetable, cur_va, 0);
+        if (pte == 0 || (*pte & PTE_V) == 0 || (*pte & PTE_U) == 0 || (*pte & PTE_S) == 0) {
+            return -1;
+        }
+    }
+
+    // Unmap the pages
+    uvmunmap(p->pagetable, start, num_pages, 1);
+
+    // Update the process size
+    p->sz -= num_pages * PGSIZE;
+
+    return 0;
 }
